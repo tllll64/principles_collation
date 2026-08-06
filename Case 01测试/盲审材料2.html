@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>After Sending · 交易推进页原型</title>
+<style>
+  :root{
+    --green:#0ac15f; --green-d:#06a04d; --green-ink:#065f34;
+    --ink:#1a1c1e; --sub:#6b7075; --line:#eceef0; --line2:#e2e5e8;
+    --bg:#f4f6f8; --card:#ffffff; --blue:#1677ff; --blue-bg:#eef4ff;
+    --amber:#b8730a; --amber-bg:#fff6e6; --usd:#2b6cff; --cny:#e8562a;
+    --radius:18px; --shadow:0 8px 30px rgba(20,30,40,.08);
+  }
+  *{box-sizing:border-box;-webkit-font-smoothing:antialiased}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Segoe UI",Roboto,sans-serif;
+    padding:32px 18px 80px}
+  h1.page{font-size:19px;text-align:center;margin:0 0 4px;font-weight:700}
+  p.pageSub{text-align:center;color:var(--sub);font-size:13px;margin:0 0 28px}
+  .lane{display:flex;gap:26px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+  .col{width:340px}
+  .col > .tag{display:flex;align-items:center;gap:8px;justify-content:center;margin:0 0 12px}
+  .tag b{font-size:14px}
+  .tag .pill{font-size:11px;background:#e9fbf0;color:var(--green-ink);padding:3px 9px;border-radius:999px;font-weight:600}
+  .tag.b .pill{background:#eef4ff;color:#1053c9}
+
+  /* language toggle */
+  .langtoggle{position:fixed;top:14px;right:16px;z-index:100;display:flex;background:#fff;border:1px solid var(--line2);border-radius:999px;padding:3px;box-shadow:0 4px 14px rgba(16,30,45,.12)}
+  .langtoggle button{border:none;background:transparent;font-size:13px;font-weight:700;color:var(--sub);padding:6px 15px;border-radius:999px;cursor:pointer}
+  .langtoggle button.on{background:var(--green);color:#fff}
+
+  /* phone */
+  .phone{width:340px;border-radius:38px;background:#000;padding:9px;box-shadow:var(--shadow)}
+  .screen{background:var(--bg);border-radius:30px;overflow:hidden;position:relative;height:722px;display:flex;flex-direction:column}
+  .statusbar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:14px;font-weight:600;color:#fff;flex:none;background:transparent;position:relative;z-index:2}
+  .statusbar .dots{font-size:8px;letter-spacing:4px}
+  .statusbar.dark{color:#fff}
+  .navbar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;color:#fff;flex:none}
+  .navbar .t{font-size:16px;font-weight:600}
+  .navbar .ic{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:18px;opacity:.95}
+  .scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+
+  /* header amount */
+  .hero{background:linear-gradient(160deg,#12c565,#06a24e);padding:46px 18px 26px;margin-top:-44px;color:#fff}
+  .toRow{text-align:center;font-size:14px;opacity:.92;margin-top:2px}
+  .amtCard{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);border-radius:16px;padding:14px 16px;margin-top:14px;backdrop-filter:blur(2px)}
+  .amtRow{display:flex;align-items:center;justify-content:space-between;padding:6px 0}
+  .amtRow .lbl{font-size:12.5px;opacity:.9}
+  .amtRow .val{font-size:15px;font-weight:700;display:flex;align-items:baseline;gap:6px}
+  .cur{font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px;letter-spacing:.4px}
+  .cur.usd{background:#dbe8ff;color:#0a3aa8}
+  .cur.cny{background:#ffe2d6;color:#b03410}
+  .amtRow.big .val{font-size:22px}
+  .amtDiv{height:1px;background:rgba(255,255,255,.2);margin:2px 0}
+  .rateNote{font-size:11px;opacity:.86;margin-top:9px;display:flex;align-items:center;gap:6px;line-height:1.4}
+  .rateNote .i{width:14px;height:14px;border:1px solid rgba(255,255,255,.7);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:9px;flex:none}
+
+  /* body */
+  .body{padding:16px 16px 26px;margin-top:-14px;background:var(--bg);border-radius:20px 20px 0 0;position:relative}
+
+  /* tabs: Updates / Details */
+  .tabs{position:sticky;top:0;z-index:5;display:flex;background:#fff;margin:0 -16px 12px;padding:0 16px;border-bottom:1px solid var(--line);box-shadow:0 3px 10px rgba(16,30,45,.05)}
+  .tab{flex:1;text-align:center;padding:13px 0;font-size:15px;font-weight:700;color:var(--sub);position:relative;cursor:pointer}
+  .tab.on{color:var(--ink)}
+  .tab.on::after{content:"";position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:56px;height:3px;border-radius:3px 3px 0 0;background:var(--green)}
+  .panel{display:none}
+  .panel.on{display:block}
+
+  /* status pill — multi-cue */
+  .statuspill{display:inline-flex;align-items:center;gap:8px;background:var(--amber-bg);color:var(--amber);
+    border:1px solid #f4e3c2;padding:6px 12px;border-radius:999px;font-size:12.5px;font-weight:600}
+  .statuspill .dot{width:8px;height:8px;border-radius:50%;background:var(--amber);position:relative}
+  .statuspill .dot::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--amber);opacity:.35}
+  .statuspill .ic{font-size:13px}
+
+  /* ACTION HERO card */
+  .action{background:var(--card);border-radius:var(--radius);padding:18px 16px 16px;margin-top:12px;
+    box-shadow:0 6px 20px rgba(16,30,45,.07);border:1px solid #eef0f2}
+  .action .eyebrow{font-size:12px;color:var(--green-d);font-weight:700;letter-spacing:.2px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+  .action h2{margin:0 0 4px;font-size:20px;line-height:1.3;font-weight:800;letter-spacing:-.2px}
+  .action h2 .hl{color:var(--cny)}
+  .action .lead{font-size:13.5px;color:var(--sub);line-height:1.55;margin:6px 0 0}
+
+  /* pre-jump preview steps */
+  .preview{margin:14px 0 4px;background:#f7f9fb;border:1px solid #eef1f4;border-radius:14px;padding:12px 13px}
+  .preview .ttl{font-size:11.5px;color:var(--sub);font-weight:600;display:flex;align-items:center;gap:6px;margin-bottom:9px}
+  .preview .ttl .wx{color:#0ac15f;font-weight:700}
+  .step{display:flex;gap:10px;align-items:flex-start;padding:4px 0}
+  .step .n{width:18px;height:18px;border-radius:50%;background:#e6f7ee;color:var(--green-d);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px}
+  .step .tx{font-size:13px;line-height:1.4}
+  .step .tx b{font-weight:600}
+  .eta{display:flex;align-items:center;gap:7px;margin-top:9px;padding-top:9px;border-top:1px dashed #e4e8ec;font-size:12.5px;color:var(--green-ink);font-weight:600}
+  .eta .c{font-size:14px}
+
+  /* recipient notify block */
+  .why{display:flex;gap:8px;align-items:flex-start;background:#eefaf2;border-radius:12px;padding:10px 12px;margin:13px 0 2px;font-size:12.5px;color:var(--green-ink);line-height:1.5}
+  .why .c{font-size:14px;margin-top:1px}
+
+  /* CTA */
+  .cta{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;margin-top:15px;
+    background:var(--green);color:#fff;border:none;border-radius:14px;padding:15px;font-size:16.5px;font-weight:700;
+    box-shadow:0 8px 18px rgba(10,193,95,.28);cursor:pointer}
+  .cta .wxlogo{width:22px;height:22px;border-radius:6px;background:#fff;color:var(--green);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800}
+  .cta.arrow::after{content:"→";font-size:17px}
+  .sublink{display:block;text-align:center;margin-top:12px;color:var(--blue);font-size:13px;font-weight:600;text-decoration:none}
+  .sublink .a{color:var(--sub);font-weight:400}
+
+  /* timeline (demoted, collapsible) */
+  .timeline{background:var(--card);border-radius:var(--radius);margin-top:14px;border:1px solid #eef0f2;overflow:hidden}
+  .tl-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer}
+  .tl-head .l{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:600}
+  .tl-head .l .g{color:var(--sub);font-weight:400;font-size:12.5px}
+  .tl-head .chev{color:var(--sub);font-size:13px;transition:.2s}
+  .tl-body{padding:0 16px 6px;display:none}
+  .tl-body.open{display:block}
+  .timeline.open .chev{transform:rotate(180deg)}
+  .node{display:flex;gap:12px;padding:2px 0}
+  .node .rail{display:flex;flex-direction:column;align-items:center;flex:none}
+  .node .d{width:12px;height:12px;border-radius:50%;background:#cdd3d8;margin-top:4px;position:relative;z-index:1}
+  .node.done .d{background:var(--green)}
+  .node.now .d{background:var(--amber);box-shadow:0 0 0 4px var(--amber-bg)}
+  .node .ln{width:2px;flex:1;background:var(--line2);margin:2px 0}
+  .node:last-child .ln{display:none}
+  .node .c{padding-bottom:14px}
+  .node .c .tm{font-size:11px;color:var(--sub)}
+  .node .c .tt{font-size:13.5px;margin-top:1px}
+  .node.now .c .tt{font-weight:700}
+  .node.future .c{opacity:.5}
+  .node.now .badge{display:inline-block;margin-left:6px;font-size:10px;background:var(--amber-bg);color:var(--amber);padding:1px 6px;border-radius:5px;font-weight:600;vertical-align:middle}
+
+  /* details / check */
+  .details{background:var(--card);border-radius:var(--radius);margin-top:14px;border:1px solid #eef0f2;padding:14px 16px}
+  .details h3{margin:0 0 10px;font-size:13.5px;font-weight:700}
+  .drow{display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--line)}
+  .drow:last-child{border:none}
+  .drow .k{color:var(--sub)}
+  .drow .v{font-weight:600;text-align:right}
+
+  /* bottom sheet (share) */
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:22px 22px 0 0;padding:8px 18px 26px;box-shadow:0 -10px 40px rgba(0,0,0,.16);z-index:41}
+  .sheet .grab{width:36px;height:4px;border-radius:2px;background:#e1e4e7;margin:8px auto 12px}
+  .sheet h4{margin:2px 0 3px;font-size:16px;font-weight:700}
+  .sheet .sub{font-size:12.5px;color:var(--sub);margin:0 0 16px;line-height:1.5}
+  .methods{display:flex;justify-content:space-between;padding:4px 4px 6px}
+  .m{display:flex;flex-direction:column;align-items:center;gap:8px;width:70px}
+  .m .ico{width:52px;height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff}
+  .m .ico.wx{background:#0ac15f}
+  .m .ico.sms{background:#3b7bff}
+  .m .ico.mail{background:#ff9500}
+  .m .ico.copy{background:#8a94a0}
+  .m .nm{font-size:12px;color:#3a3f44}
+  .m .rec{position:relative}
+  .m .rec::after{content:"推荐";position:absolute;top:-6px;right:-4px;background:var(--cny);color:#fff;font-size:9px;padding:1px 5px;border-radius:6px;font-weight:700}
+  html[lang="en"] .m .rec::after{content:"Top"}
+  .sheetfoot{margin-top:14px;text-align:center}
+  .sheetfoot a{color:var(--blue);font-size:12.5px;text-decoration:none}
+  .dim{position:absolute;inset:0;background:rgba(15,20,25,.42);z-index:40}
+
+  /* fallback frame accent */
+  .fallback .action{border:1px dashed #d9b26a;background:#fffdf7}
+  .fallback .eyebrow{color:var(--amber)}
+
+  .cap{width:340px;font-size:12px;color:var(--sub);line-height:1.6;margin-top:14px}
+  .cap b{color:var(--ink)}
+  .legend{max-width:1120px;margin:6px auto 30px;font-size:12.5px;color:var(--sub);line-height:1.7;
+    background:#fff;border:1px solid var(--line2);border-radius:14px;padding:16px 20px}
+  .legend b{color:var(--ink)}
+  .legend .k{display:inline-block;background:#eef4ff;color:#1053c9;font-size:11px;font-weight:600;padding:1px 7px;border-radius:6px;margin:0 2px}
+  .sec{max-width:1120px;margin:0 auto 10px;font-size:13px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.6px}
+</style>
+</head>
+<body>
+
+<div class="langtoggle"><button id="zhBtn" class="on" onclick="setLang('zh')">中</button><button id="enBtn" onclick="setLang('en')">EN</button></div>
+
+<h1 class="page" data-en='After Sending · From a “Status Page” to a “Transaction-Advancing Page”'>After Sending · 从「状态展示页」→「交易推进页」</h1>
+<p class="pageSub" data-en='Same structure; on entry it auto-detects self-collect / notify-recipient and tells a different “next step”. Differences are noted under each screen.'>同一套结构，进入页面即自动判断 自汇自收 / 自汇他收，讲不同的"下一步"。差异见每屏标注。</p>
+
+<div class="lane">
+
+  <!-- ============ 场景 A：自汇自收 ============ -->
+  <div class="col">
+    <div class="tag"><b data-en='Case A · Self-collect'>场景 A · 自汇自收</b><span class="pill" data-en='You → you collect'>你 → 你自己收</span></div>
+    <div class="phone"><div class="screen">
+      <div class="statusbar"><span>9:41</span><span class="dots">&#9679;&#9679;&#9679;</span></div>
+      <div class="hero">
+        <div class="navbar"><span class="ic">‹</span><span class="t" data-en='Transfer status'>汇款进度</span><span class="ic">?</span></div>
+        <div class="toRow" data-en='To <b>my WeChat Wallet</b>'>转到 <b>我的微信钱包</b></div>
+        <div class="amtCard">
+          <div class="amtRow"><span class="lbl" data-en='You send'>你付出</span><span class="val"><span class="cur usd">USD</span>$1,000.00</span></div>
+          <div class="amtDiv"></div>
+          <div class="amtRow big"><span class="lbl" data-en='You receive'>你将收到</span><span class="val"><span class="cur cny">CNY</span>¥6,848.50</span></div>
+          <div class="rateNote"><span class="i">i</span><span data-en='Live rate 6.8485 · locked at 10:15 as the settlement point; the payout will not change'>实时汇率 6.8485 · 已于 10:15 锁定为成交时点，到账不再变动</span></div>
+        </div>
+      </div>
+
+      <div class="scroll"><div class="body">
+        <div class="tabs"><div class="tab on" onclick="tab(this,'Aup')">Updates</div><div class="tab" onclick="tab(this,'Ade')">Details</div></div>
+        <div class="panel on" id="Aup">
+        <span class="statuspill" data-en='<span class="dot"></span><span class="ic">&#9201;</span>In progress · go to WeChat to collect'><span class="dot"></span><span class="ic">&#9201;</span>进行中 · 待你到微信领取</span>
+
+        <div class="action">
+          <div class="eyebrow" data-en='● Your turn'>● 轮到你了</div>
+          <h2 data-en='Go to WeChat and collect <span class="hl">¥6,848.50</span>'>去微信，把 <span class="hl">¥6,848.50</span> 领进来</h2>
+          <p class="lead" data-en='The money is waiting at your WeChat collection entry. Collect it once in WeChat and it lands in your Change.'>钱已到你的微信收款入口，需要你在微信里手动领取一次，才会进零钱。</p>
+
+          <div class="preview">
+            <div class="ttl" data-en='Tapping opens <span class="wx">WeChat</span>, where you will see:'>点击后将打开 <span class="wx">微信</span>，你会看到：</div>
+            <div class="step"><span class="n">1</span><span class="tx" data-en='The chat with <b>XX Remit</b> opens'>与「<b>XX汇款</b>」的对话被打开</span></div>
+            <div class="step"><span class="n">2</span><span class="tx" data-en='Tap <b>“Collect ¥6,848.50 now”</b> in the message'>点消息里的 <b>「立即领取 ¥6,848.50」</b></span></div>
+            <div class="step"><span class="n">3</span><span class="tx" data-en='Confirm, and the money enters <b>WeChat Change</b>'>确认后钱进 <b>微信零钱</b></span></div>
+            <div class="eta" data-en='<span class="c">&#9889;</span>Arrives about 1 min after collecting'><span class="c">&#9889;</span>领取后约 1 分钟到账</div>
+          </div>
+
+          <button class="cta" data-en='<span class="wxlogo">&#128172;</span>Collect in WeChat'><span class="wxlogo">&#128172;</span>前往微信领取</button>
+          <a class="sublink" href="#" data-en='Trouble collecting? <span style="text-decoration:underline">See the guide</span>'>领取遇到问题？<span style="text-decoration:underline">查看收款攻略</span></a>
+        </div>
+
+        <div class="timeline" id="tlA">
+          <div class="tl-head" onclick="tog('tlA')">
+            <span class="l" data-en='Transaction progress <span class="g">· 4/5 steps, traceable</span>'>交易进度 <span class="g">· 4/5 步，可追溯</span></span>
+            <span class="chev">▼</span>
+          </div>
+          <div class="tl-body">
+            <div class="node done"><div class="rail"><div class="d"></div><div class="ln"></div></div><div class="c"><div class="tm" data-en='Today 10:15'>今天 10:15</div><div class="tt" data-en='You set up this transfer'>你发起了这笔汇款</div></div></div>
+            <div class="node done"><div class="rail"><div class="d"></div><div class="ln"></div></div><div class="c"><div class="tm" data-en='Today 10:15'>今天 10:15</div><div class="tt" data-en='We received your USD'>我们已收到你的 USD</div></div></div>
+            <div class="node done"><div class="rail"><div class="d"></div><div class="ln"></div></div><div class="c"><div class="tm" data-en='Today 10:15'>今天 10:15</div><div class="tt" data-en='Your identity is verified'>身份已通过验证</div></div></div>
+            <div class="node now"><div class="rail"><div class="d"></div><div class="ln"></div></div><div class="c"><div class="tm" data-en='Today 10:15'>今天 10:15</div><div class="tt" data-en='Waiting for you to collect in WeChat<span class="badge">Now</span>'>等你在微信领取<span class="badge">当前</span></div></div></div>
+            <div class="node future"><div class="rail"><div class="d"></div></div><div class="c"><div class="tm" data-en='Est. 1 min after collecting'>预计领取后 1 分钟</div><div class="tt" data-en='Lands in your WeChat Change'>到账你的微信零钱</div></div></div>
+          </div>
+        </div>
+
+        </div><!-- /Aup -->
+        <div class="panel" id="Ade">
+        <div class="details">
+          <h3 data-en='Transaction details (for checking)'>交易信息（可核对）</h3>
+          <div class="drow"><span class="k" data-en='Order No.'>订单号</span><span class="v">RM20260729100015</span></div>
+          <div class="drow"><span class="k" data-en='Sent'>汇出</span><span class="v">$1,000.00 USD</span></div>
+          <div class="drow"><span class="k" data-en='Received'>到账</span><span class="v">¥6,848.50 CNY</span></div>
+          <div class="drow"><span class="k" data-en='Settled rate'>成交汇率</span><span class="v" data-en='6.8485 (locked 10:15)'>6.8485（10:15 锁定）</span></div>
+          <div class="drow"><span class="k" data-en='Recipient'>收款方</span><span class="v" data-en='Myself · WeChat Wallet'>本人 · 微信钱包</span></div>
+        </div>
+        </div><!-- /Ade -->
+      </div></div>
+    </div></div>
+    <div class="cap" data-en='<b>Diff vs B:</b> recipient = self → primary CTA is “Collect in WeChat” (you collect it), with a <b>pre-jump preview</b> (where · what · how long) to remove the blind jump. The title verb points to “you collect”, never “share with someone”.'><b>与 B 的差异：</b>收款人=本人 → 主 CTA＝「前往微信领取」（自己去收），配<b>跳转前预览</b>（去哪·干嘛·多久），消除盲跳。标题动作指向"你自己领"，不出现"分享给别人"。</div>
+  </div>
+
+  <!-- ============ 场景 B：自汇他收 ============ -->
+  <div class="col">
+    <div class="tag b"><b data-en='Case B · Notify recipient'>场景 B · 自汇他收</b><span class="pill" data-en='You → notify LI SI'>你 → 通知 李四 收</span></div>
+    <div class="phone"><div class="screen">
+      <div class="statusbar"><span>9:41</span><span class="dots">&#9679;&#9679;&#9679;</span></div>
+      <div class="hero">
+        <div class="navbar"><span class="ic">‹</span><span class="t" data-en='Transfer status'>汇款进度</span><span class="ic">?</span></div>
+        <div class="toRow" data-en='To <b>LI SI</b>'>转给 <b>李四（LI SI）</b></div>
+        <div class="amtCard">
+          <div class="amtRow"><span class="lbl" data-en='You send'>你付出</span><span class="val"><span class="cur usd">USD</span>$1,000.00</span></div>
+          <div class="amtDiv"></div>
+          <div class="amtRow big"><span class="lbl" data-en='LI SI receives'>李四将收到</span><span class="val"><span class="cur cny">CNY</span>¥6,848.50</span></div>
+          <div class="rateNote"><span class="i">i</span><span data-en='Live rate 6.8485 · locked at 10:15 as the settlement point; the payout will not change'>实时汇率 6.8485 · 已于 10:15 锁定为成交时点，到账不再变动</span></div>
+        </div>
+      </div>
+
+      <div class="scroll"><div class="body">
+        <div class="tabs"><div class="tab on" onclick="tab(this,'Bup')">Updates</div><div class="tab" onclick="tab(this,'Bde')">Details</div></div>
+        <div class="panel on" id="Bup">
+        <span class="statuspill" data-en='<span class="dot"></span><span class="ic">&#9201;</span>In progress · notify your recipient'><span class="dot"></span><span class="ic">&#9201;</span>进行中 · 待你通知收款人</span>
+
+        <div class="action">
+          <div class="eyebrow" data-en='● Your turn'>● 轮到你了</div>
+          <h2 data-en='Notify <span class="hl">LI SI</span> to collect'>通知 <span class="hl">李四</span> 来收这笔钱</h2>
+          <p class="lead" data-en='LI SI has not confirmed collection in WeChat yet. Send a nudge so the money can arrive sooner.'>李四 还没在微信上确认收款。发条通知提醒 TA，钱才能尽快到账。</p>
+
+          <div class="why" data-en='<span class="c">&#9889;</span><span>The sooner you notify, the sooner LI SI can collect ¥6,848.50. The link tells them how to collect — you do not need to explain.</span>'><span class="c">&#9889;</span><span>你越早通知，李四越早能领到 ¥6,848.50。领取步骤会在通知链接里告诉 TA，你无需转告。</span></div>
+
+          <button class="cta" onclick="openSheet()" data-en='<span class="wxlogo">&#128172;</span>Notify LI SI'><span class="wxlogo">&#128172;</span>通知李四收款</button>
+          <a class="sublink" href="#" data-en='<span class="a">LI SI rarely uses WeChat?</span> Send the guide link'><span class="a">李四不常用微信？</span> 发送「收款攻略」链接</a>
+        </div>
+
+        <div class="timeline" id="tlB">
+          <div class="tl-head" onclick="tog('tlB')">
+            <span class="l" data-en='Transaction progress <span class="g">· 4/5 steps, traceable</span>'>交易进度 <span class="g">· 4/5 步，可追溯</span></span>
+            <span class="chev">▼</span>
+          </div>
+          <div class="tl-body">
+            <div class="node done"><div class="rail"><div class="d"></div><div class="ln"></div></div><div class="c"><div class="tm" data-en='Today 10:15'>今天 10:15</div><div class="tt" data-en='You set up this transfer'>你发起了这笔汇款</div></div></div>
+            <div class="node done"><div class="rail"><div class="d"></div><div class="ln"></div></div><div class="c"><div class="tm" data-en='Today 10:15'>今天 10:15</div><div class="tt" data-en='We received your USD'>我们已收到你的 USD</div></div></div>
+            <div class="node done"><div class="rail"><div class="d"></div><div class="ln"></div></div><div class="c"><div class="tm" data-en='Today 10:15'>今天 10:15</div><div class="tt" data-en='Your identity is verified'>身份已通过验证</div></div></div>
+            <div class="node now"><div class="rail"><div class="d"></div><div class="ln"></div></div><div class="c"><div class="tm" data-en='Today 10:15'>今天 10:15</div><div class="tt" data-en='Waiting for you to notify LI SI<span class="badge">Now</span>'>等你通知李四来收<span class="badge">当前</span></div></div></div>
+            <div class="node future"><div class="rail"><div class="d"></div></div><div class="c"><div class="tm" data-en='After LI SI collects'>李四领取后</div><div class="tt" data-en='Lands in LI SI’s WeChat Change'>到账李四的微信零钱</div></div></div>
+          </div>
+        </div>
+
+        </div><!-- /Bup -->
+        <div class="panel" id="Bde">
+        <div class="details">
+          <h3 data-en='Transaction details (for checking)'>交易信息（可核对）</h3>
+          <div class="drow"><span class="k" data-en='Order No.'>订单号</span><span class="v">RM20260729100016</span></div>
+          <div class="drow"><span class="k" data-en='Sent'>汇出</span><span class="v">$1,000.00 USD</span></div>
+          <div class="drow"><span class="k" data-en='Received'>到账</span><span class="v">¥6,848.50 CNY</span></div>
+          <div class="drow"><span class="k" data-en='Settled rate'>成交汇率</span><span class="v" data-en='6.8485 (locked 10:15)'>6.8485（10:15 锁定）</span></div>
+          <div class="drow"><span class="k" data-en='Recipient'>收款方</span><span class="v" data-en='LI SI · WeChat Wallet'>李四 LI SI · 微信钱包</span></div>
+        </div>
+        </div><!-- /Bde -->
+      </div></div>
+
+      <!-- share sheet -->
+      <div class="dim" id="dimB" style="display:none" onclick="closeSheet()"></div>
+      <div class="sheet" id="sheetB" style="display:none;transform:translateY(0)">
+        <div class="grab"></div>
+        <h4 data-en='Notify LI SI'>通知李四收款</h4>
+        <p class="sub" data-en='LI SI receives a message with a “Collect now” button — <b>tap to collect</b>, no sign-up. Pick a way to send it:'>李四将收到一条含「立即领取」的消息，<b>点开就能收</b>，无需注册。选一种方式发给 TA：</p>
+        <div class="methods">
+          <div class="m"><div class="ico wx rec">&#128172;</div><div class="nm" data-en='WeChat'>微信</div></div>
+          <div class="m"><div class="ico sms">&#128241;</div><div class="nm" data-en='SMS'>短信</div></div>
+          <div class="m"><div class="ico mail">&#9993;</div><div class="nm" data-en='Email'>邮件</div></div>
+          <div class="m"><div class="ico copy">&#128203;</div><div class="nm" data-en='Copy link'>复制链接</div></div>
+        </div>
+        <div class="sheetfoot"><a href="#" data-en='LI SI cannot receive it? Send the guide link instead ›'>李四收不到？改发「收款攻略」链接 ›</a></div>
+      </div>
+    </div></div>
+    <div class="cap" data-en='<b>Diff vs A:</b> recipient = someone else → primary CTA is “Notify LI SI” (pushes you to reach out); tapping opens the share panel. Copy always says “notify them”, never asks you to explain their steps; the recipient’s steps are handled by the link’s landing page.'><b>与 A 的差异：</b>收款人=他人 → 主 CTA＝「通知李四收款」（推你去触达），点开＝分享方式面板。文案始终是"通知 TA"，不让你去替 TA 解释操作；收款人步骤由链接落地页承接。</div>
+  </div>
+
+  <!-- ============ 降级态 ============ -->
+  <div class="col fallback">
+    <div class="tag"><b data-en='Fallback · Sharing unavailable'>降级态 · 通知能力不可用</b><span class="pill" style="background:#fff1de;color:#b8730a" data-en='Fallback'>兜底</span></div>
+    <div class="phone"><div class="screen">
+      <div class="statusbar"><span>9:41</span><span class="dots">&#9679;&#9679;&#9679;</span></div>
+      <div class="hero">
+        <div class="navbar"><span class="ic">‹</span><span class="t" data-en='Transfer status'>汇款进度</span><span class="ic">?</span></div>
+        <div class="toRow" data-en='To <b>LI SI</b>'>转给 <b>李四（LI SI）</b></div>
+        <div class="amtCard">
+          <div class="amtRow"><span class="lbl" data-en='You send'>你付出</span><span class="val"><span class="cur usd">USD</span>$1,000.00</span></div>
+          <div class="amtDiv"></div>
+          <div class="amtRow big"><span class="lbl" data-en='LI SI receives'>李四将收到</span><span class="val"><span class="cur cny">CNY</span>¥6,848.50</span></div>
+          <div class="rateNote"><span class="i">i</span><span data-en='Live rate 6.8485 · locked at 10:15; the payout will not change'>实时汇率 6.8485 · 已于 10:15 锁定，到账不再变动</span></div>
+        </div>
+      </div>
+      <div class="scroll"><div class="body">
+        <div class="tabs"><div class="tab on" onclick="tab(this,'Fup')">Updates</div><div class="tab" onclick="tab(this,'Fde')">Details</div></div>
+        <div class="panel on" id="Fup">
+        <span class="statuspill" data-en='<span class="dot"></span><span class="ic">&#9201;</span>In progress · notify your recipient'><span class="dot"></span><span class="ic">&#9201;</span>进行中 · 待通知收款人</span>
+        <div class="action">
+          <div class="eyebrow" data-en='● Your turn'>● 轮到你了</div>
+          <h2 data-en='Send the guide to <span class="hl">LI SI</span>'>把「收款攻略」发给 <span class="hl">李四</span></h2>
+          <p class="lead" data-en='One-tap sharing is unavailable right now. Copy the link below and send it to LI SI manually; it contains the full collection steps.'>当前暂时无法一键分享。你可以复制下方链接手动发给李四，链接里有完整的领取步骤。</p>
+          <div class="preview">
+            <div class="ttl" data-en='Collection link'>收款链接</div>
+            <div class="step"><span class="tx" style="word-break:break-all"><b>https://rm.xx.com/receive/RM…0016</b></span></div>
+            <div class="eta" data-en='<span class="c">&#128274;</span>This link is a dedicated entry for this transfer — send it only to LI SI.'><span class="c">&#128274;</span>链接含本笔专属领取入口，请只发给李四本人</div>
+          </div>
+          <button class="cta" style="background:var(--amber);box-shadow:0 8px 18px rgba(184,115,10,.25)" data-en='<span class="wxlogo" style="color:var(--amber)">&#128203;</span>Copy collection link'><span class="wxlogo" style="color:var(--amber)">&#128203;</span>复制收款链接</button>
+          <a class="sublink" href="#" data-en='See the full illustrated guide'>查看完整「收款攻略」图文</a>
+        </div>
+        </div><!-- /Fup -->
+        <div class="panel" id="Fde">
+        <div class="details">
+          <h3 data-en='Transaction details (for checking)'>交易信息（可核对）</h3>
+          <div class="drow"><span class="k" data-en='Order No.'>订单号</span><span class="v">RM20260729100016</span></div>
+          <div class="drow"><span class="k" data-en='Sent'>汇出</span><span class="v">$1,000.00 USD</span></div>
+          <div class="drow"><span class="k" data-en='Received'>到账</span><span class="v">¥6,848.50 CNY</span></div>
+          <div class="drow"><span class="k" data-en='Settled rate'>成交汇率</span><span class="v" data-en='6.8485 (locked 10:15)'>6.8485（10:15 锁定）</span></div>
+          <div class="drow"><span class="k" data-en='Recipient'>收款方</span><span class="v" data-en='LI SI · WeChat Wallet'>李四 LI SI · 微信钱包</span></div>
+        </div>
+        </div><!-- /Fde -->
+      </div></div>
+    </div></div>
+    <div class="cap" data-en='<b>Trigger:</b> when the ShareLink H5 relay / all share channels are unavailable. The primary CTA degrades to “Copy link”, with the guide link kept as backup — the page never reverts to a read-only status page.'><b>触发条件：</b>ShareLink H5 中转 / 各渠道分享均不可用时。主 CTA 退化为「复制链接」，并保留「收款攻略」蓝链兜底，绝不让页面变回只读状态页。</div>
+  </div>
+
+</div>
+
+<div class="sec" style="margin-top:26px" data-en='How to read'>读图说明</div>
+<div class="legend" data-en='<b>Structure (shared by both cases; A/B swap content, not the skeleton):</b> ① Amount header (trust anchor, strong USD/CNY distinction + rate basis) → ② <span class="k">Action Hero</span> (the new lead of the page, pulled out of the timeline) → ③ Progress timeline (<b>demoted, collapsed by default</b>, kept only as a traceable record) → ④ Transaction details (for checking).<br> <b>Auto case-split:</b> on entry it checks whether the recipient is you → decides the Hero’s title verb (<b>collect</b> vs <b>notify</b>), the CTA, and whether the “pre-jump preview” or the “share panel” appears.<br> <b>Interactive:</b> “Transaction progress” expands/collapses; Case B’s “Notify LI SI” opens the share panel.'>
+  <b>结构（两场景共用，A/B 只换内容不换骨架）：</b>
+  ① 顶部金额区（信任锚点，USD/CNY 强区分 + 汇率口径）→
+  ② <span class="k">行动区 Hero</span>（页面新主角，从时间线里抽出）→
+  ③ 交易进度时间线（<b>降权、默认折叠</b>，仅作可追溯背书）→
+  ④ 交易信息（可核对）。<br>
+  <b>自动分场景：</b>进页判断收款人是否本人 → 决定 Hero 的标题动词（<b>领取</b> vs <b>通知</b>）、CTA、以及是否出现"跳转前预览"或"分享方式面板"。<br>
+  <b>交互可点：</b>「交易进度」可展开/收起；场景 B 的「通知李四收款」可唤起分享面板。
+</div>
+
+<script>
+  function setLang(l){
+    document.documentElement.setAttribute('lang', l==='en'?'en':'zh-CN');
+    document.querySelectorAll('[data-en]').forEach(function(el){
+      if(el.getAttribute('data-zh')===null) el.setAttribute('data-zh', el.innerHTML);
+      el.innerHTML = (l==='en') ? el.getAttribute('data-en') : el.getAttribute('data-zh');
+    });
+    document.getElementById('zhBtn').classList.toggle('on', l!=='en');
+    document.getElementById('enBtn').classList.toggle('on', l==='en');
+  }
+  function tab(el,id){
+    var wrap=el.closest('.body');
+    wrap.querySelectorAll('.tab').forEach(function(t){t.classList.remove('on')});
+    el.classList.add('on');
+    wrap.querySelectorAll('.panel').forEach(function(p){p.classList.remove('on')});
+    wrap.querySelector('#'+id).classList.add('on');
+  }
+  function tog(id){document.getElementById(id).classList.toggle('open');
+    document.querySelector('#'+id+' .tl-body').classList.toggle('open');}
+  function openSheet(){document.getElementById('dimB').style.display='block';document.getElementById('sheetB').style.display='block';}
+  function closeSheet(){document.getElementById('dimB').style.display='none';document.getElementById('sheetB').style.display='none';}
+</script>
+</body>
+</html>
